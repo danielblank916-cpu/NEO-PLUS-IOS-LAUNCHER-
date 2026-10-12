@@ -30,7 +30,7 @@ jobs:
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
 
-            - name: Accept Android SDK licenses
+      - name: Accept Android SDK licenses
         run: |
           mkdir -p "$ANDROID_SDK_ROOT/licenses"
           printf '%s\n' \
@@ -69,4 +69,3 @@ jobs:
           name: NEO-PLUS-IOS-LUANCHER-APK
           path: NEO-PLUS-IOS-LUANCHER.apk
           if-no-files-found: error
-          
