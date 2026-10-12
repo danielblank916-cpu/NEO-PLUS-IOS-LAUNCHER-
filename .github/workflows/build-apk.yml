@@ -52,7 +52,7 @@ jobs:
 
       - name: Extract Android project
         run: |
-          unzip -q NEO-PLUS-IOS-LUANCHER-Android-Project.zip -d .
+          unzip -o -q NEO-PLUS-IOS-LUANCHER-Android-Project.zip -d .
           test -f settings.gradle.kts
           test -f app/build.gradle.kts
           test -f app/src/main/AndroidManifest.xml
