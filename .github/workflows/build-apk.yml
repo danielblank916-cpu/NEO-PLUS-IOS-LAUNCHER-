@@ -1,0 +1,63 @@
+
+name: Build NEO PLUS IOS LUANCHER APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'NEO-PLUS-IOS-LUANCHER-Android-Project.zip'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Extract Android project
+        run: |
+          unzip -q NEO-PLUS-IOS-LUANCHER-Android-Project.zip -d .
+          test -f settings.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/src/main/AndroidManifest.xml
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Prepare APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk NEO-PLUS-IOS-LUANCHER.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEO-PLUS-IOS-LUANCHER-APK
+          path: NEO-PLUS-IOS-LUANCHER.apk
+          if-no-files-found: error
+          
