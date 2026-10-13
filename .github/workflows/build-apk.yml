@@ -32,11 +32,25 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
+      - name: Locate project (unzip nested zip if needed)
+        run: |
+          if [ -z "$(find . -name 'settings.gradle*' -not -path './.git/*' | head -n1)" ]; then
+            Z=$(find . -maxdepth 2 -name '*.zip' | head -n1)
+            echo "No Gradle project found; unzipping $Z"
+            unzip -o -q "$Z" -d _project
+          fi
+          S=$(find . -name 'settings.gradle*' -not -path './.git/*' | head -n1)
+          echo "PROJECT_DIR=$(dirname "$S")" >> "$GITHUB_ENV"
+          echo "Project dir: $(dirname "$S")"
+
       - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: gradle assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk NEO-PLUS-IOS-LUANCHER.apk
+        run: |
+          APK=$(find "$PROJECT_DIR" -name 'app-debug.apk' | head -n1)
+          cp "$APK" NEO-PLUS-IOS-LUANCHER.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
