@@ -11,6 +11,23 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pick the newest project zip and unpack it
+        run: |
+          # 1) a project zip added or changed in the latest push, else 2) the highest version number in the repo
+          ZIP=$(git diff --name-only HEAD~1 HEAD -- '*.zip' 2>/dev/null | grep -E 'LAUNCHER-v[0-9]' | sort -V | tail -1 || true)
+          if [ -z "$ZIP" ]; then
+            ZIP=$(ls -1 | grep -E '^NEO-PLUS-IOS-LAUNCHER-v[0-9]+_[0-9]+.*\.zip$' | sort -V | tail -1)
+          fi
+          echo "Building from: $ZIP"
+          rm -rf build-src && mkdir build-src
+          unzip -q "$ZIP" -d build-src
+          DIR=$(dirname "$(find build-src -name settings.gradle.kts | head -1)")
+          echo "DIR=$DIR" >> "$GITHUB_ENV"
+          echo "Project folder: $DIR"
+          grep -n "versionName" "$DIR/app/build.gradle.kts"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -29,32 +46,13 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Locate project (unzip nested zip if needed)
-        run: |
-          if [ -z "$(find . -name 'settings.gradle*' -not -path './.git/*' | head -n1)" ]; then
-            Z=$(find . -maxdepth 2 -name '*.zip' | head -n1)
-            echo "No Gradle project found; unzipping $Z"
-            unzip -o -q "$Z" -d _project
-          fi
-          S=$(find . -name 'settings.gradle*' -not -path './.git/*' | head -n1)
-          echo "PROJECT_DIR=$(dirname "$S")" >> "$GITHUB_ENV"
-          echo "Project dir: $(dirname "$S")"
-
       - name: Build debug APK
-        working-directory: ${{ env.PROJECT_DIR }}
+        working-directory: ${{ env.DIR }}
         run: gradle assembleDebug --no-daemon
-
-      - name: Rename APK
-        run: |
-          APK=$(find "$PROJECT_DIR" -name 'app-debug.apk' | head -n1)
-          cp "$APK" NEO-PLUS-IOS-LUANCHER.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: NEO-PLUS-IOS-LUANCHER
-          path: NEO-PLUS-IOS-LUANCHER.apk
+          name: NEO-PLUS-IOS-LAUNCHER
+          path: ${{ env.DIR }}/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
